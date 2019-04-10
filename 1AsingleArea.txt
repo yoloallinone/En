@@ -1,0 +1,65 @@
+<---------prac1 single area ospf-----------------------------------1
+
+
+R1>------------------------------->
+hostname R1
+interface Loopback1
+description Engineering Department
+ip address 10.1.1.1 255.255.255.0
+interface FastEthernet0/0
+ip address 10.1.200.1 255.255.255.0
+no shutdown
+interface Serial0/0/0
+ip address 10.1.100.1 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+router ospf 1
+network 10.1.1.0 0.0.0.255 area 0
+network 10.1.100.0 0.0.0.255 area 0
+network 10.1.200.0 0.0.0.255 area 0
+end
+
+R2>------------------------------->
+hostname R2
+interface Loopback2
+description Marketing Department
+ip address 10.1.2.1 255.255.255.0
+ip ospf network point-to-point
+interface FastEthernet0/0
+ip address 10.1.200.2 255.255.255.0
+no shutdown
+interface Serial0/0/0
+ip address 10.1.100.2 255.255.255.0
+bandwidth 64
+no shutdown
+router ospf 1
+network 10.1.2.0 0.0.0.255 area 0
+network 10.1.100.0 0.0.0.255 area 0
+network 10.1.200.0 0.0.0.255 area 0
+end
+
+R3>-------------------------------->
+hostname R3
+interface Loopback3
+description Accounting Department
+ip address 10.1.3.1 255.255.255.0
+ip ospf network point-to-point
+interface FastEthernet0/0
+ip address 10.1.200.3 255.255.255.0
+no shutdown
+router ospf 1
+network 10.1.3.0 0.0.0.255 area 0
+network 10.1.200.0 0.0.0.255 area 0
+end
+
+------Test Network commands------->
+set cost ->interface->ip ospf set cost 50
+set priority->int->ip ospf set priority 10
+verify loopback->show ip ospf interface Lo1
+show ip protocols
+show ip ospf 
+show ip route
+show ip ospf neighbor
+show ip ospf neighbor detail  
+show ip ospf interface brief 

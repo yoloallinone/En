@@ -1,0 +1,79 @@
+<---------prac5B 6-4 tunnel ---------------------------------------5B
+
+
+R1>-------------------------------------->
+hostname R1
+ipv6 unicast-routing
+interface Loopback0
+ip address 10.1.1.1 255.255.255.0
+ipv6 address FEC0::1:1/112
+interface Loopback11
+no ip address
+ipv6 address 2002:AC10:C01:11::1/64
+interface Loopback12
+no ip address
+ipv6 address 2002:AC10:C01:12::1/64
+interface Tunnel0
+ipv6 address 2002:AC10:C01:1::1/64
+tunnel source Serial0/0/0
+tunnel mode ipv6ip 6to4
+interface Serial0/0/0
+ip address 172.16.12.1 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+router eigrp 1
+network 10.0.0.0
+network 172.16.0.0
+no auto-summary
+ipv6 route 2002::/16 Tunnel0
+ipv6 route FEC0::3:0/112 2002:AC10:1703:1::3
+end
+
+R2>-------------------------------------->
+hostname R2
+interface Loopback0
+ip address 10.1.2.1 255.255.255.0
+interface Serial0/0/0
+ip address 172.16.12.2 255.255.255.0
+bandwidth 64
+no shutdown
+interface Serial0/0/1
+ip address 172.16.23.2 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+router eigrp 1
+network 10.0.0.0
+network 172.16.0.0
+no auto-summary
+end
+
+R3>-------------------------------------->
+hostname R3
+ipv6 unicast-routing
+interface Loopback0
+ip address 10.1.3.1 255.255.255.0
+ipv6 address FEC0::3:1/112
+interface Loopback31
+no ip address
+ipv6 address 2002:AC10:1703:31::1/64
+interface Loopback32
+no ip address
+ipv6 address 2002:AC10:1703:32::1/64
+interface Tunnel0
+no ip address
+ipv6 address 2002:AC10:1703:1::3/64
+tunnel source Serial0/0/1
+tunnel mode ipv6ip 6to4
+interface Serial0/0/1
+ip address 172.16.23.3 255.255.255.0
+bandwidth 64
+no shutdown
+router eigrp 1
+network 10.0.0.0
+network 172.16.0.0
+no auto-summary
+ipv6 route 2002::/16 Tunnel0
+ipv6 route FEC0::1:0/112 2002:AC10:C01:1::1
+end

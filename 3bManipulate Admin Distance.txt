@@ -1,0 +1,93 @@
+<---------prac3b Manipulate Admin Distance---------------------------------------3B
+
+
+R1>-------------------------------------->
+hostname R1
+interface Loopback1
+ip address 172.16.1.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback101
+ip address 192.168.101.1 255.255.255.0
+ip ospf network point-to-point
+interface FastEthernet0/0
+ip address 172.16.12.1 255.255.255.0
+no shutdown
+interface Serial0/0/1
+bandwidth 64
+ip address 172.16.13.1 255.255.255.0
+no shutdown
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.101.0 0.0.0.255 area 0
+distance 85 192.168.100.0 0.0.3.255
+router rip
+version 2
+network 172.16.0.0
+network 192.168.101.0
+distance 100
+no auto-summary
+
+access-list 1 permit 172.16.0.0 0.0.255.255
+distance 65 0.0.0.0 255.255.255.255 1
+end
+
+
+R2>-------------------------------------->
+hostname R2
+interface Loopback2
+ip address 172.16.2.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback102
+ip address 192.168.102.1 255.255.255.0
+ip ospf network point-to-point
+interface FastEthernet0/0
+ip address 172.16.12.2 255.255.255.0
+no shutdown
+interface FastEthernet0/1
+ip address 172.16.23.2 255.255.255.0
+no shutdown
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.102.0 0.0.0.255 area 0
+distance 85 192.168.100.0 0.0.3.255
+router rip
+version 2
+network 172.16.0.0
+network 192.168.102.0
+distance 100
+
+distance 65 0.0.0.0 255.255.255.255 1
+no auto-summary
+access-list 1 permit 172.16.0.0 0.0.255.255
+end
+
+R3>-------------------------------------->
+hostname R3
+interface Loopback3
+ip address 172.16.3.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback103
+ip address 192.168.103.1 255.255.255.0
+ip ospf network point-to-point
+interface FastEthernet0/0
+ip address 172.16.23.3 255.255.255.0
+no shutdown
+interface Serial0/0/0
+bandwidth 64
+ip address 172.16.13.3 255.255.255.0
+clock rate 64000
+no shutdown
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.103.0 0.0.0.255 area 0
+distance 85 192.168.100.0 0.0.3.255
+router rip
+version 2
+network 172.16.0.0
+network 192.168.103.0
+distance 100
+
+distance 65 0.0.0.0 255.255.255.255 1
+no auto-summary
+access-list 1 permit 172.16.0.0 0.0.255.255
+end

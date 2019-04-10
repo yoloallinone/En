@@ -1,0 +1,72 @@
+<---------prac4A Configuring BGP  ---------------------------------------4A
+
+
+R1>-------------------------------------->
+hostname ISP1
+interface Loopback0
+description ISP1 Internet network
+ip address 10.1.1.1 255.255.255.0
+interface Loopback100
+ip address 192.168.100.1 255.255.255.0
+interface Serial0/0/0
+description ISP1 -> ITA
+ip address 10.0.0.1 255.255.255.252
+clock rate 128000
+no shutdown
+router bgp 200
+no synchronization
+network 10.1.1.0 mask 255.255.255.0
+network 192.168.100.0
+neighbor 10.0.0.2 remote-as 100
+
+no auto-summary
+end
+
+R2>-------------------------------------->
+hostname ITA
+interface Loopback0
+description Core router network link 1
+ip address 192.168.0.1 255.255.255.0
+interface Loopback1
+description Core router network link 2
+ip address 192.168.1.1 255.255.255.0
+interface Serial0/0/0
+description ITA -> ISP1
+ip address 10.0.0.2 255.255.255.252
+no shutdown
+interface Serial0/0/1
+description ITA -> ISP2
+ip address 172.16.0.2 255.255.255.252
+clock rate 128000
+no shutdown
+router bgp 100
+no synchronization
+network 192.168.0.0
+network 192.168.1.0
+
+neighbor 10.0.0.1 remote-as 200
+neighbor 10.0.0.1 distribute-list 1 out
+neighbor 172.16.0.1 remote-as 300
+neighbor 172.16.0.1 distribute-list 1 out
+no auto-summary
+ip default-network 192.168.100.0
+ip route 0.0.0.0 0.0.0.0 172.16.0.1 220
+access-list 1 permit 192.168.0.0 0.0.1.255
+end
+
+R3>-------------------------------------->
+hostname ISP2
+interface Loopback0
+description ISP2 Internet Network
+ip address 172.16.1.1 255.255.255.0
+interface Serial0/0/1
+description ISP2 -> ITA
+ip address 172.16.0.1 255.255.255.252
+no shutdown
+router bgp 300
+no synchronization
+network 172.16.1.0 mask 255.255.255.0
+neighbor 172.16.0.2 remote-as 100
+
+no auto-summary
+end

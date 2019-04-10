@@ -1,0 +1,103 @@
+<---------prac3a Redistribution rip&ospf---------------------------------------3A
+
+
+R1>-------------------------------------->
+hostname R1
+interface Loopback0
+ip address 172.16.1.1 255.255.255.0
+interface Loopback48
+ip address 192.168.48.1 255.255.255.0
+interface Loopback49
+ip address 192.168.49.1 255.255.255.0
+interface Loopback50
+ip address 192.168.50.1 255.255.255.0
+interface Loopback51
+ip address 192.168.51.1 255.255.255.0
+interface Loopback70
+ip address 192.168.70.1 255.255.255.0
+interface Serial0/0/0
+ip address 172.16.12.1 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+router rip
+version 2
+redistribute static
+passive-interface Loopback0
+passive-interface Loopback48
+passive-interface Loopback49
+passive-interface Loopback50
+passive-interface Loopback51
+passive-interface Loopback70
+network 172.16.0.0
+network 192.168.48.0
+network 192.168.49.0
+network 192.168.50.0
+network 192.168.51.0
+network 192.168.70.0
+distribute-list prefix RIP-OUT out Serial0/0/0
+no auto-summary
+ip route 192.168.48.0 255.255.252.0 Null0
+
+
+ip prefix-list RIP-OUT seq 5 permit 192.168.48.0/22
+ip prefix-list RIP-OUT seq 10 deny 192.168.48.0/22 le 24
+ip prefix-list RIP-OUT seq 15 permit 0.0.0.0/0 le 32
+end
+
+R2>-------------------------------------->
+hostname R2
+interface Loopback0
+ip address 172.16.2.1 255.255.255.0
+interface Serial0/0/0
+ip address 172.16.12.2 255.255.255.0
+bandwidth 64
+no shutdown
+interface Serial0/0/1
+ip address 172.16.23.2 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+router ospf 1
+redistribute rip metric-type 1 subnets
+network 172.16.23.0 0.0.0.255 area 0
+default-metric 10000
+router rip
+version 2
+redistribute ospf 1 metric 4
+passive-interface Serial0/0/1
+passive-interface Loopback0
+network 172.16.0.0
+no auto-summary
+end
+
+R3>-------------------------------------->
+hostname R3
+interface Loopback0
+ip address 172.16.3.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback20
+ip address 192.168.20.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback25
+ip address 192.168.25.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback30
+ip address 192.168.30.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback35
+ip address 192.168.35.1 255.255.255.0
+ip ospf network point-to-point
+interface Loopback40
+ip address 192.168.40.1 255.255.255.0
+ip ospf network point-to-point
+interface Serial0/0/1
+ip address 172.16.23.3 255.255.255.0
+bandwidth 64
+no shutdown
+router ospf 1
+passive-interface default
+no passive-interface Serial0/0/1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.0.0 0.0.255.255 area 0
+end
