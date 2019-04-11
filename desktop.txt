@@ -1,0 +1,1714 @@
+-- 1A Single Area OSPF Link Costs and Interface Priorities --
+- Step 1: Configure addressing and loopbacks.
+- R1
+interface Loopback1
+description Engineering Department
+ip address 10.1.1.1 255.255.255.0
+exit
+interface FastEthernet0/0
+ip address 10.1.200.1 255.255.255.0
+no shutdown
+
+- R2
+interface Loopback2
+description Marketing Department
+ip address 10.1.2.1 255.255.255.0
+exit
+interface FastEthernet0/0
+ip address 10.1.200.2 255.255.255.0
+no shutdown
+
+- R3
+interface Loopback3
+description Accounting Department
+ip address 10.1.3.1 255.255.255.0
+exit
+interface FastEthernet0/0
+ip address 10.1.200.3 255.255.255.0
+no shutdown
+
+- R1
+interface Serial 0/0/0
+ip address 10.1.100.1 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+interface Serial 0/0/0
+ip address 10.1.100.2 255.255.255.0
+bandwidth 64
+no shutdown
+
+- Step 2: Add physical interfaces to OSPF.
+- R1
+router ospf 1
+network 10.1.100.0 0.0.0.255 area 0
+network 10.1.200.0 0.0.0.255 area 0
+end
+
+- R2
+router ospf 1
+network 10.1.100.0 0.0.0.255 area 0
+network 10.1.200.0 0.0.0.255 area 0
+
+- R3
+router ospf 1
+network 10.1.200.0 0.0.0.255 area 0
+
+- Step 3: Use OSPF show commands.
+- R1
+show ip protocols
+show ip ospf
+show ip ospf neighbor
+show ip ospf interface FastEthernet 0/0
+show ip ospf interface brief
+show ip ospf database
+
+- Step 4: Add loopback interfaces to OSPF.
+-  R1, R2, R3
+show ip route
+
+- R1
+router ospf 1
+network 10.1.1.0 0.0.0.255 area 0
+
+- R2
+router ospf 1
+network 10.1.2.0 0.0.0.255 area 0
+
+- R3
+router ospf 1
+network 10.1.3.0 0.0.0.255 area 0
+
+- R1
+show ip route
+show ip ospf interface Lo1
+
+- R1
+interface loopback1
+ip ospf network point-to-point
+
+- R2
+interface loopback2
+ip ospf network point-to-point
+
+- R3
+interface loopback3
+ip ospf network point-to-point
+
+- R1
+show ip route
+
+- Step 5: Modify OSPF link costs.
+- R1
+interface FastEthernet 0/0
+ip ospf cost 50
+
+- R2
+interface FastEthernet 0/0
+ip ospf cost 50
+
+- R3
+interface FastEthernet 0/0
+ip ospf cost 50
+
+- R1
+show ip route
+
+- Step 6: Modify interface priorities to control the DR and BDR election.
+- R1
+interface FastEthernet 0/0
+ip ospf priority 10
+
+- R2
+interface FastEthernet 0/0
+ip ospf priority 5
+
+- R1
+show ip ospf neighbor detail
+
+
+
+
+
+-- 1B Multi-Area OSPF with Stub Areas and Authentication -- 
+- Step 1: Configure addressing and loopbacks.
+- R1
+interface loopback 1
+description Engineering Department
+ip address 10.1.1.1 255.255.255.0
+interface serial 0/0/0
+ip address 10.1.12.1 255.255.255.0
+clock rate 64000
+no shutdown
+
+- R2
+interface loopback 2
+description Marketing Department
+ip address 10.1.2.1 255.255.255.0
+interface serial 0/0/0
+ip address 10.1.12.2 255.255.255.0
+no shutdown
+interface serial 0/0/1
+ip address 10.1.23.2 255.255.255.0
+clock rate 64000
+no shutdown
+
+- R3
+interface loopback 3
+description Accounting Department
+ip address 10.1.3.1 255.255.255.0
+interface loopback 20
+description Connection to another AS
+ip address 172.20.200.1 255.255.255.0
+interface serial 0/0/1
+ip address 10.1.23.3 255.255.255.0
+no shutdown
+
+- Step 2: Add interfaces into OSPF.
+- R1
+router ospf 1
+network 10.1.12.0 0.0.0.255 area 0
+network 10.1.1.0 0.0.0.255 area 0
+exit
+interface loopback 1
+ip ospf network point-to-point
+
+- R2
+router ospf 1
+network 10.1.12.0 0.0.0.255 area 0
+network 10.1.2.0 0.0.0.255 area 0
+exit
+interface loopback 2
+ip ospf network point-to-point
+
+- Verify that both routers have OSPF neighbors
+- R1, R2
+show ip ospf neighbor
+
+- Verify that the routers can see each other’s loopback
+- R1, R2
+show ip route
+
+- Add the subnet between R2 and R3 into OSPF area 23. Add loopback 3 on R3 into area 23.
+- R2
+router ospf 1
+network 10.1.23.0 0.0.0.255 area 23
+
+- R3
+router ospf 1
+network 10.1.23.0 0.0.0.255 area 23
+network 10.1.3.0 0.0.0.255 area 23
+interface loopback 3
+ip ospf network point-to-point
+
+- Verify that this neighbor relationship comes up
+- R2
+show ip ospf neighbour
+
+- If you look at the output of the show ip route command on R1, you see a route to the R3 loopback. Notice that it is identified as an inter-area route.
+- Issue the show ip route command on R2. Notice that R2 has no inter-area routes because R2 is in both areas. It is an ABR, or area border router.
+- R1, R2
+show ip route
+
+- Step 3: Configure a stub area.
+- R2, R3
+router ospf 1
+area 23 stub
+
+- Confirm that it comes up by using the show ip ospf neighbors command.
+- R2, R3
+show ip ospf neighbor
+
+- Using the show ip route command, you can see that R3 now has a default route pointing toward R2. A stub area does not receive any external routes. It receives a default route and OSPF inter-area routes.
+- R3
+show ip route
+
+- Look at the output of the show ip ospf command to see what type each area is.
+- R2
+show ip ospf
+
+- Step 4: Configure a totally stubby area.
+- First issue the show ip route command on R3. Notice the inter-area routes, in addition to the default route generated by R2.
+- R3
+show ip route
+
+- Look at the output of the show ip ospf database command on R2 to see which LSAs are in its OSPF database.
+- R2
+show ip ospf database
+
+- Enter the stub no-summary command on R2 (the ABR) under the OSPF process.
+- R2
+router ospf 1
+area 23 stub no-summary
+
+- Go back to R3 and issue the show ip route command again. Notice that it shows only one incoming route from OSPF
+- Look at the show ip ospf database output to see which routes are in area 23.
+- R3
+show ip route
+show ip ospf database
+
+- Step 5: Configure a not-so-stubby area.
+- Change area 23 into an NSSA. NSSAs are not compatible with stub areas, so the first thing to do is issue the no area 23 stub command on routers R2 and R3. Next, issue the area area nssa command on routers R2 and R3 to change area 23 to an NSSA.
+- R2
+router ospf 1
+no area 23 stub
+area 23 nssa
+
+- R3
+router ospf 1
+no area 23 stub
+area 23 nssa
+redistribute connected subnets
+
+- In the output of the show ip ospf command on R2, notice that area 23 is an NSSA and that R2 is performing the LSA type 7 to type 5 translation
+- Look at the show ip route output on R2. Notice that the external route comes in as type N2 from R3.
+- R2
+show ip ospf
+show ip route
+
+- Look at the show ip route output on R1. Notice that the route is now a regular E2 external route, because R2 has performed the type 7 to type 5 translation.
+- R1
+show ip route
+
+- Look at the show ip route output on R3. Notice that it no longer has a default route in it, but inter-area routes are coming in.
+- R3
+show ip route
+
+- Issue the area 23 nssa no-summary command on R2, similar to converting a stub area into a totally stubby area.
+- R2
+router ospf 1
+area 23 nssa no-summary
+
+- Check the routing table on R3. Notice that the inter-area routes have been replaced by a single default route.
+- R3
+show ip route
+
+- On R2, look at the show ip ospf database output to see the various LSA types. 
+- R2
+show ip ospf database
+
+- Step 6: Configure OSPF interface authentication.
+- Configure the link between R2 and R3 for plaintext authentication. To set up plaintext authentication on an interface, type ip ospf authentication at the interface command prompt. Then set the password to cisco with the ip ospf authentication-key key-string command.
+- R2
+interface serial 0/0/1
+ip ospf authentication
+ip ospf authentication-key cisco
+
+- R3
+interface serial 0/0/1
+ip ospf authentication
+ip ospf authentication-key cisco
+
+- Verify the authentication using the show ip ospf interface interface command.
+- R2
+show ip ospf interface serial 0/0/1
+
+- MD5 authentication encrypts the password for stronger security. Configure the link between R1 and R2 for MD5 authentication using the ip ospf authentication message-digest interface command
+- R1
+interface serial 0/0/0
+ip ospf authentication message-digest
+ip ospf message-digest-key 1 md5 cisco
+
+- R2
+interface serial 0/0/0
+ip ospf authentication message-digest
+ip ospf message-digest-key 1 md5 cisco
+
+- Verify the configuration using the show ip ospf interface interface command.
+- R1
+show ip ospf interface serial 0/0/0
+
+
+
+
+
+-- 2A OSPF Virtual Links and Area Summarization --
+- Step 1: Configure addressing and loopbacks.
+- R1
+interface loopback 1
+description Engineering Department
+ip address 10.1.1.1 255.255.255.0
+interface loopback 30
+ip address 172.30.30.1 255.255.255.252
+interface serial 0/0/0
+ip address 10.1.12.1 255.255.255.0
+clock rate 64000
+no shutdown
+
+- R2
+interface loopback 2
+description Marketing Department
+ip address 10.1.2.1 255.255.255.0
+interface serial 0/0/0
+ip address 10.1.12.2 255.255.255.0
+no shutdown
+interface serial 0/0/1
+ip address 10.1.23.2 255.255.255.0
+clock rate 64000
+no shutdown
+
+- R3
+interface loopback 3
+description Accounting Department
+ip address 10.1.3.1 255.255.255.0
+interface loopback 100
+ip address 192.168.100.1 255.255.255.0
+interface loopback 101
+ip address 192.168.101.1 255.255.255.0
+interface loopback 102
+ip address 192.168.102.1 255.255.255.0
+interface loopback 103
+ip address 192.168.103.1 255.255.255.0
+interface serial 0/0/1
+ip address 10.1.23.3 255.255.255.0
+no shutdown
+
+- Step 2: Add interfaces into OSPF.
+- R1
+router ospf 1
+network 10.1.12.0 0.0.0.255 area 0
+network 10.1.1.0 0.0.0.255 area 0
+exit
+interface loopback 1
+ip ospf network point-to-point
+
+- R2
+router ospf 1
+network 10.1.12.0 0.0.0.255 area 0
+network 10.1.2.0 0.0.0.255 area 0
+exit
+interface loopback 2
+ip ospf network point-to-point
+
+- Verify that you can see OSPF neighbors in the show ip ospf neighbors output on both routers and also see each other’s loopback with the show ip route command.
+- R1
+show ip ospf neighbor
+show ip route
+show ip ospf neighbor
+show ip route
+
+- Add the subnet between R2 and R3 into OSPF area 23 using the network command. Add loopback 3 on R3 into area 23.
+- R2
+router ospf 1
+network 10.1.23.0 0.0.0.255 area 23
+
+- R3
+router ospf 1
+network 10.1.23.0 0.0.0.255 area 23
+network 10.1.3.0 0.0.0.255 area 23
+exit
+interface loopback 3
+ip ospf network point-to-point
+
+- Verify that this neighbor relationship comes up with the show ip ospf neighbors command.
+- R2
+show ip ospf neighbour
+
+- Step 3: Create a virtual link.
+- Add loopbacks 100 through 103 on R3 to the OSPF process in area 100 using the network command. Change the network type to advertise the correct subnet mask.
+- R3
+router ospf 1
+network 192.168.100.0 0.0.3.255 area 100
+exit
+interface loopback 100
+ip ospf network point-to-point
+interface loopback 101
+ip ospf network point-to-point
+interface loopback 102
+ip ospf network point-to-point
+interface loopback 103
+ip ospf network point-to-point
+
+- Look at the output of the show ip route command on R2.
+- R2
+show ip route
+
+- Prior to creating a virtual link you need to identify the OSPF router ID for the routers involved (R2 and R3), using a command such as show ip ospf, show ip protocols or show ip ospf interface. The output for the show ip ospf command on R1 and R3 is shown below.
+- R2, R2
+show ip ospf
+
+- Create a virtual link using the area transit_area virtual-link router-id OSPF configuration command on both R2 and R3.
+- R2
+router ospf 1
+area 23 virtual-link 192.168.103.1
+
+- R3
+router ospf 1
+area 23 virtual-link 10.1.2.1
+
+- After you see the adjacency over the virtual interface come up, issue the show ip route command on R2 and see the routes from area 100. You can verify the virtual link with the show ip ospf neighbor and show ip ospf interface commands.
+- R2
+show ip route
+show ip ospf neighbour
+show ip ospf interface
+
+- Step 4: Summarize an area.
+- Loopbacks 100 through 103 can be summarized into one supernet of 192.168.100.0 /22. You can configure area 100 to be represented by this single summary route.
+- Configure R3 (the ABR) to summarize this area using the area area range network mask command.
+- R3
+router ospf 1
+area 100 range 192.168.100.0 255.255.252.0
+
+- You can see the summary route on R2 with the show ip route and show ip ospf database commands.
+- R2
+show ip route
+show ip ospf database
+
+- Notice on R3 that OSPF has generated a summary route pointing toward Null0.
+- R3
+show ip route
+
+- Step 5: Generate a default route into OSPF.
+- You can simulate loopback 30 on R1 to be a connection to the Internet. You do not need to advertise this specific network to the rest of the network. Instead, you can just have a default route for all unknown traffic to go to R1.
+- To have R1 generate a default route, use the OSPF configuration command default-information originate always. The always keyword is necessary for generating a default route in this scenario. Without this keyword, a default route is generated only into OSPF if one exists in the routing table.
+- R1
+router ospf 1
+default-information originate always
+
+#^NOT WORKING
+
+- Verify that the default route appears on R2 and R3 with the show ip route command.
+- R2, R3
+show ip route
+show ip route
+
+- You should be able to ping the interface connecting to the Internet from R2 or R3, despite never being advertised into OSPF.
+- R3
+ping 172.30.30.1
+
+
+
+
+
+-- 2B OSPF over Frame Relay --
+
+
+
+
+
+
+-- 3A Redistribution Between RIP and OSPF --
+- Step 1: Configure loopbacks and assign addresses.
+- R1
+interface Loopback0
+ip address 172.16.1.1 255.255.255.0
+interface Loopback48
+ip address 192.168.48.1 255.255.255.0
+interface Loopback49
+ip address 192.168.49.1 255.255.255.0
+interface Loopback50
+ip address 192.168.50.1 255.255.255.0
+interface Loopback51
+ip address 192.168.51.1 255.255.255.0
+interface Loopback70
+ip address 192.168.70.1 255.255.255.0
+interface Serial0/0/0
+ip address 172.16.12.1 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+
+- R2
+interface Loopback0
+ip address 172.16.2.1 255.255.255.0
+interface Serial0/0/0
+ip address 172.16.12.2 255.255.255.0
+bandwidth 64
+no shutdown
+interface Serial0/0/1
+ip address 172.16.23.2 255.255.255.0
+clock rate 64000
+bandwidth 64
+no shutdown
+
+- R3
+interface Loopback0
+ip address 172.16.3.1 255.255.255.0
+interface Loopback20
+ip address 192.168.20.1 255.255.255.0
+interface Loopback25
+ip address 192.168.25.1 255.255.255.0
+interface Loopback30
+ip address 192.168.30.1 255.255.255.0
+interface Loopback35
+ip address 192.168.35.1 255.255.255.0
+interface Loopback40
+ip address 192.168.40.1 255.255.255.0
+interface Serial0/0/1
+ip address 172.16.23.3 255.255.255.0
+bandwidth 64
+no shutdown
+
+- On each router, create an enable secret password. Configure the console line for synchronous logging and no timeout. Configure the vty lines to allow Telnet to and remote configuration of network devices
+- R1, R2, R3
+enable secret cisco
+line con 0
+logging synchronous
+exec-timeout 0 0
+line vty 0 4
+password cisco
+login
+
+- Step 2: Configure RIPv2.
+- R1
+router rip
+version 2
+no auto-summary
+network 172.16.0.0
+network 192.168.48.0
+network 192.168.49.0
+network 192.168.50.0
+network 192.168.51.0
+network 192.168.70.0
+
+- R2
+router rip
+version 2
+no auto-summary
+network 172.16.0.0
+
+- Verify that the RIP routes were learned from the other routers
+- R1, R2
+show ip route rip
+
+- You can also verify which routes are coming in from RIP advertisements
+- R1, R2
+show ip rip database
+
+- Step 3: Configure passive interfaces in RIP.
+- On R1, use the show ip route rip command to view the RIP routes in the routing table
+- R1
+show ip route rip
+
+- Issue the show ip protocols command to verify that RIPv2 updates are being sent out both serial interfaces.
+- R2
+show ip protocols
+
+- On R2, configure the serial interface connecting to R3 as passive. Notice that the interface is no longer listed in the output of the show ip protocols command.
+- R2
+router rip
+passive-interface serial 0/0/1
+exit
+exit
+show ip protocols
+
+- On R1, issue the show ip route rip command. Notice that the 172.16.23.0 network is still in the routing table and being sourced from RIP.
+- R1
+show ip route rip
+
+- If you are unsure, monitor the output of the debug ip rip command to verify your answer. On R1 and R2, configure all loopbacks from which RIPv2 is sending advertisements in passive state with the passive-interface command.
+- R1
+router rip
+passive-interface loopback 0
+passive-interface loopback 48
+passive-interface loopback 49
+passive-interface loopback 50
+passive-interface loopback 51
+passive-interface loopback 70
+
+- R2
+router rip
+passive-interface loopback 0
+router rip
+passive-interface default
+no passive-interface Serial0/0/0
+
+- Step 4: Summarize a supernet with RIP.
+- On R2, issue the show ip route rip command. Notice that you can see all prefixes from R1 in the R2 routing table.
+- R2
+show ip route rip
+
+- Under normal circumstances, you could simply summarize the four consecutive class-C networks with the ip summary address rip command on the R1 serial 0/0/0 interface.
+- R1
+interface serial 0/0/0
+ip summary-address rip 192.168.48.0 255.255.252.0
+
+#^NOT WORKING
+
+- To get around the ip summary-address rip message error, create a static route on R1 to summarize the networks of loopbacks 48 through 51. Then redistribute the route on R1.
+- R1
+ip route 192.168.48.0 255.255.252.0 null0
+router rip
+redistribute static
+
+- On R1 and R2, verify that the RIP supernet has been added to the routing table with the show ip route command.
+- R1, R2
+show ip route
+show ip route
+
+- Step 5: Suppress routes using prefix lists
+- On R1, use a prefix list as a distribution filter to prevent the more specific routes to loopbacks 48 through 51 from being advertised. Allow all other destination networks, including the summary route.
+- Line 1 of the prefix list permits the summary route and nothing else, because no other route can match that network address with a mask of exactly 22 bits.
+- Line 2 denies all prefixes with a network address in the 192.168.48.0/22 block of addresses that have subnet masks from 22 bits to 24 bits. This removes exactly four network addresses matching the 22, 23, and 24 bits in length of the subnet mask. Line 2 would deny the 192.168.48.0/22 summary route you created if Line 1 did not explicitly permit the summary route.
+- Line 3 allows all IPv4 prefixes that are not explicitly denied in previous statements of the prefix list.
+- R1
+ip prefix-list RIP-OUT permit 192.168.48.0/22
+ip prefix-list RIP-OUT deny 192.168.48.0/22 le 24
+ip prefix-list RIP-OUT permit 0.0.0.0/0 le 32
+
+#^NOT WORKING
+
+- From the RIP configuration prompt on R1, apply this access list with the distribute-list command.
+- R1
+router rip
+distribute-list prefix RIP-OUT out serial0/0/0
+
+On R2, verify that the filtering has taken place
+- R2
+show ip route rip
+show ip rip database
+
+- Step 6: Configure OSPF.
+- R2
+router ospf 1
+network 172.16.23.0 0.0.0.255 area 0
+
+- R3
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.0.0 0.0.255.255 area 0
+
+- On R3, change the network type for the loopback interfaces to point-to-point so that they are advertised with the correct subnet mask (/24 instead of /32).
+- R3
+ip ospf network point-to-point
+interface Loopback20
+ip ospf network point-to-point
+interface Loopback25
+ip ospf network point-to-point
+interface Loopback30
+ip ospf network point-to-point
+interface Loopback35
+ip ospf network point-to-point
+interface Loopback40
+ip ospf network point-to-point
+
+- Verify the OSPF adjacencies on R2 and R3 with the show ip ospf neighbors command. Also make sure that you have routes from OSPF populating the routing tables with the show ip route ospf command.
+- R2, R3
+show ip ospf neighbor
+show ip route ospf
+
+- Step 7: Configure passive interfaces in OSPF.
+- R3
+router ospf 1
+passive-interface loopback 0
+passive-interface default
+no passive-interface serial 0/0/1
+
+- You can verify the application of this command by issuing the show ip protocols command.
+- R3
+show ip protocols
+
+- Step 8: Allow one-way redistribution.
+- R2
+router rip
+redistribute ospf 1 metric 4
+
+- Verify the redistribution with the show ip protocols command.
+- R2
+R2# show ip protocols
+
+- On R1, look at the routing table with the show ip route rip command. It has all the routes in the topology.
+- R1
+R1# show ip route rip
+
+- On R1, ping a loopback on R3. Notice that it shows that R1 has a route to R3, but R3 does not have a route back to R1.
+- R1
+ping 192.168.30.1
+
+- On R1, verify that R3 does not have a route back with the traceroute command.
+- R1
+traceroute 192.168.30.1
+
+- From the OSPF configuration prompt, issue the default-information originate always command to force R2 to advertise a default route in OSPF.
+- R2
+router ospf 1
+default-information originate always
+
+- Verify that this route is present in the R3 routing table.
+- R3
+show ip route ospf
+
+- Step 9: Redistribute between two routing protocols.
+- You can substitute this default route with actual, more specific routes.
+- On R2, under the OSPF router configuration prompt, remove the default route advertisement with the no default-information originate always command
+- R2
+router ospf 1
+no default-information originate always
+redistribute rip
+
+- If you display the routing table on R3, the external OSPF routes that were added are the 192.168.70.0/24 and 192.168.48.0/22 networks.
+- R3
+show ip route ospf
+
+- You can modify this behavior by adding the subnets keyword to the redistribute command.
+- R2
+router ospf 1
+redistribute rip subnets
+
+- On R3, verify the configuration with the show ip route ospf command.
+- R3
+show ip route ospf
+
+- Step 10: Set a default seed metric.
+- R3
+show ip route ospf
+
+- On R2, in OSPF configuration mode, issue the default-metric metric command to configure a default metric for redistributed routes
+- R2
+router ospf 1
+default-metric 10000
+
+- Verify the new metric in the R3 routing table. It might take some time for the new metric to propagate.
+- R3
+show ip route ospf
+
+- Step 11: Change the OSPF external network type.
+- You can change the external type using the metric-type argument with the redistribute command. Change the type to E1 for RIP redistributed routes.
+- R2
+router ospf 1
+redistribute rip subnets metric-type 1
+
+- Display the R3 routing table again.
+- R3
+show ip route ospf
+
+
+
+
+
+-- 3B Manipulating Administrative Distances --
+- Step 1: Review default administrative distances
+Protocol: 				Administrative Distance:
+Connected					0
+Static						1
+EIGRP Summary Route			5
+External BGP				20
+EIGRP						90
+IGRP						100
+OSPF						110
+IS-IS						115
+RIP							120
+EGP							140
+On-Demand Routing (ODR)		160
+External EIGRP				170
+Internal BGP				200
+Unknown						255
+
+- Step 2: Configure router loopbacks and addressing.
+- R1
+interface loopback 1
+ip address 172.16.1.1 255.255.255.0
+interface loopback 101
+ip address 192.168.101.1 255.255.255.0
+interface fastethernet 0/0
+ip address 172.16.12.1 255.255.255.0
+no shutdown
+interface serial 0/0/1
+bandwidth 64
+ip address 172.16.13.1 255.255.255.0
+no shutdown
+
+- R2
+interface loopback 2
+ip address 172.16.2.1 255.255.255.0
+interface loopback 102
+ip address 192.168.102.1 255.255.255.0
+interface fastethernet 0/0
+ip address 172.16.12.2 255.255.255.0
+no shutdown
+interface fastethernet 0/1
+ip address 172.16.23.2 255.255.255.0
+no shutdown
+
+- R3
+interface loopback 3
+ip address 172.16.3.1 255.255.255.0
+interface loopback 103
+ip address 192.168.103.1 255.255.255.0
+interface fastethernet 0/0
+ip address 172.16.23.3 255.255.255.0
+no shutdown
+interface serial 0/0/0
+bandwidth 64
+ip address 172.16.13.3 255.255.255.0
+clock rate 64000
+no shutdown
+
+- Step 3: Configure switch VLANs.
+- Switch0
+vlan 12
+name R1-R2
+vlan 23
+name R2-R3
+exit
+interface fastEthernet 0/1
+description To R1 Fa0/0
+switchport mode access
+switchport access vlan 12
+interface fastEthernet 0/2
+description To R2 Fa0/0
+switchport mode access
+switchport access vlan 12
+interface fastEthernet 0/3
+description To R3 Fa0/0
+switchport mode access
+switchport access vlan 23
+interface fastEthernet 0/4
+description To R2 Fa0/1
+switchport mode access
+switchport access vlan 23
+
+- Verify that you can ping across the local subnets.
+
+- Step 4: Configure RIP.
+- R1
+router rip
+version 2
+no auto-summary
+network 172.16.0.0
+network 192.168.101.0
+
+- R2
+router rip
+version 2
+no auto-summary
+network 172.16.0.0
+network 192.168.102.0
+
+- R3
+router rip
+version 2
+no auto-summary
+network 172.16.0.0
+network 192.168.103.0
+
+- Verify the configuration
+- R1, R2, R3
+show ip route rip
+
+- Verify that each router is receiving RIP routes from other routers
+- R1, R2, R3
+show ip protocols
+
+- Step 5: Configure OSPF.
+- R1
+interface loopback 1
+ip ospf network point-to-point
+interface loopback 101
+ip ospf network point-to-point
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.101.0 0.0.0.255 area 0
+
+- R2
+interface loopback 2
+ip ospf network point-to-point
+interface loopback 102
+ip ospf network point-to-point
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.102.0 0.0.0.255 area 0
+
+- R3
+interface loopback 3
+ip ospf network point-to-point
+interface loopback 103
+ip ospf network point-to-point
+router ospf 1
+network 172.16.0.0 0.0.255.255 area 0
+network 192.168.103.0 0.0.0.255 area 0
+
+- Verify the configuration
+- R1, R2, R3
+show ip ospf neighbor
+show ip route
+
+- R1
+show ip ospf database router adv-router 192.168.103.1
+
+- Step 6: Modify the routing protocol distance.
+- R1, R2, R3
+router rip
+distance 100
+
+- Examine the output of the show ip route command. Notice that all the routes have become RIP routes because RIP now has a lower distance than OSPF.
+- R1, R2, R3
+show ip route
+
+-You can display the new default distance for RIP using the show ip protocols command.
+- R1
+show ip protocols
+
+- Step 7: Modify distance based on route source.
+- R1, R2, R3
+router ospf 1
+distance 85 192.168.100.0 0.0.3.255
+
+- Verify the change.
+- R1, R2, R3
+show ip route
+
+- R1
+show ip protocols
+
+- Step 8: Modify distance based on an access list.
+- R1, R2, R3
+access-list 1 permit 172.16.0.0 0.0.255.255
+router rip
+distance 65 0.0.0.0 255.255.255.255 1
+
+#^NOT WORKING
+
+- Verify the change
+- R1, R2, R3
+show ip protocols
+show ip route
+
+
+
+
+
+-- 4A Configuring BGP with Default Routing --
+- Step 1: Prepare the routers for the lab.
+- R1, R2, R3
+erase startup-config
+#press enter
+reload
+#press enter
+
+
+- Step 2: Configure the hostname and interface addresses.
+- R1
+hostname ISP1
+
+- R2
+hostname ITA
+
+- R3
+hostname ISP2
+
+- ISP1
+interface Lo0
+description ISP1 Internet Network
+ip address 10.1.1.1 255.255.255.0
+interface Serial0/0/0
+description ISP1 -> ITA
+ip address 10.0.0.1 255.255.255.252
+clock rate 128000
+no shutdown
+
+- ITA
+interface Lo0
+description Core router network link 1
+ip address 192.168.0.1 255.255.255.0
+interface Lo1
+description Core router network link 2
+ip address 192.168.1.1 255.255.255.0
+interface Serial0/0/0
+description ITA -> ISP1
+ip address 10.0.0.2 255.255.255.252
+no shutdown
+interface Serial0/0/1
+description ITA -> ISP2
+ip address 172.16.0.2 255.255.255.252
+clock rate 128000
+no shutdown
+
+- ISP2
+interface Lo0
+description ISP2 Internet Network
+ip address 172.16.1.1 255.255.255.0
+interface Serial0/0/1
+description ISP2 -> ITA
+ip address 172.16.0.1 255.255.255.252
+no shutdown
+
+- Use ping to test the connectivity between the directly connected routers. Note that router ISP1 cannot reach router ISP2.
+
+- Step 3: Configure BGP on the ISP routers.
+- ISP1
+router bgp 200
+neighbor 10.0.0.2 remote-as 100
+network 10.1.1.0 mask 255.255.255.0
+
+- ISP2
+router bgp 300
+neighbor 172.16.0.2 remote-as 100
+network 172.16.1.0 mask 255.255.255.0
+
+- Step 4: Configure BGP on the ITA boundary router.
+- ITA
+router bgp 100
+neighbor 10.0.0.1 remote-as 200
+neighbor 172.16.0.1 remote-as 300
+network 192.168.0.0
+network 192.168.1.0
+
+To verify the configuration, check the ITA routing table
+- ITA
+show ip route
+
+- Step 5: Verify BGP on the routers.
+- ITA, ISP1
+show ip bgp
+
+- On the ISP1 router, issue the shutdown command on Loopback0. Then on ITA, issue the show ip bgp command again.
+- ISP1
+interface Lo0
+shutdown
+
+- ITA
+show ip bgp
+
+- Bring ISP1 router Loopback0 back up by issuing the no shutdown command
+- ISP1
+interface Lo0
+no shutdown
+
+- ITA
+show ip bgp neighbors
+
+- Step 6: Configure route filters.
+- Check the ISP2 routing table using the show ip route command. ISP2 should have a route that belongs to ISP1, network 10.1.1.0.
+- ISP2
+show ip route
+
+- On the ITA router, configure the following access list.
+- ITA
+access-list 1 permit 192.168.0.0 0.0.1.255
+
+- Apply this access list as a route filter using the distribute-list keyword with the BGP neighbor statement.
+- ITA
+router bgp 100
+neighbor 10.0.0.1 distribute-list 1 out
+neighbor 172.16.0.1 distribute-list 1 out
+
+- Check the routing table for ISP2 again. The route to 10.1.1.0, ISP1, should still be in the table.
+- ISP2
+show ip route
+
+- ITA
+clear ip bgp *
+
+- ISP1, ISP2
+show ip route
+
+- Step 7: Configure primary and backup routes using floating static routes.
+- With bidirectional communication established with each ISP via BGP, configure the primary and backup routes. This can be done with floating static routes or BGP.
+Issue the show ip route command on the ITA router.
+- ITA
+show ip route
+
+- Configure static routes to reflect the policy that ISP1 is the primary provider and that ISP2 acts as the backup by specifying a lower distance metric for the route to ISP1 (210) as compared to the backup route to ISP2 (distance metric 220).
+- ITA
+ip route 0.0.0.0 0.0.0.0 10.0.0.1 210
+ip route 0.0.0.0 0.0.0.0 172.16.0.1 220
+
+- Verify that a default route is defined using the show ip route command.
+- ITA
+show ip route
+
+- Test this default route by creating an unadvertised loopback on the router for ISP1.
+- ISP1
+interface loopback 100
+ip address 192.168.100.1 255.255.255.0
+
+- Issue the show ip route command to ensure that the newly added 192.168.100.0 /24 network does not appear in the routing table.
+- ITA
+show ip route
+
+- In extended ping mode, ping the ISP1 loopback 1 interface 192.168.100.1 with the source originating from the ITA loopback 1 interface 192.168.1.1.
+- ITA
+ping
+#press enter
+- Options: (REST ALL DEFAULT VALUES)
+Target IP address: 192.168.100.1
+Extended commands [n]: y
+Source address or interface: 192.168.1.1
+
+- Step 8: Configure primary and backup routes using a default network and a static route.
+- Remove the floating static routes configured in Step 7.
+- ITA
+no ip route 0.0.0.0 0.0.0.0 10.0.0.1 210
+no ip route 0.0.0.0 0.0.0.0 172.16.0.1 220
+
+- The network that was added in Step 7, 192.168.100.0/24, should now be advertised on the ISP1 router. You might need to wait a few moments for BGP to advertise the new network.
+- ISP1
+router bgp 200
+network 192.168.100.0
+end
+
+- Make sure that the classful network 192.168.100.0 /24 appears in the ITA routing table.
+- ITA
+show ip route
+
+- On the ITA router, configure the ip default-network statement to reestablish a gateway of last resort.
+- ITA
+ip default-network 192.168.100.0
+
+- Wait a few moments and then reexamine the routing table on ITA.
+- ITA
+show ip route
+
+- Make ISP2 the backup ISP by adding a backup route on ITA to ISP2 serial 0/0/1 interface 172.16.0.1.
+- ITA
+ip route 0.0.0.0 0.0.0.0 172.16.0.1 220
+
+- Verify that this newly added route establishes a consistent default route while the BGP conversation between ITA and ISP1 reestablishes
+- ITA
+show ip route
+clear ip bgp 10.0.0.1
+show ip route
+
+
+
+
+
+-- 5A Configuring OSPF for IPv6 --
+- Step 1: Prepare the routers for the lab.
+- R1, R2, R3
+erase startup-config
+#press enter
+reload
+#press enter
+
+- Step 2: Configuring the hostname and loopback interfaces.
+- R1
+interface loopback0
+ip address 10.1.1.1 255.255.255.0
+ipv6 address FEC0::1:1/112
+
+- R2
+interface loopback0
+ip address 10.1.2.1 255.255.255.0
+ipv6 address FEC0::2:1/112
+
+- R3
+interface loopback0
+ip address 10.1.3.1 255.255.255.0
+ipv6 address FEC0::3:1/112
+
+- Step 3: Configure static IPv6 addresses.
+- R1
+interface serial0/0/0
+ipv6 address FEC0::12:1/112
+clock rate 64000
+bandwidth 64
+no shutdown
+interface serial0/0/1
+ipv6 address FEC0::13:1/112
+bandwidth 64
+no shutdown
+
+- R2
+interface serial0/0/0
+ipv6 address FEC0::12:2/112
+bandwidth 64
+no shutdown
+
+- R3
+interface serial0/0/0
+ipv6 address FEC0::13:3/112
+clock rate 64000
+bandwidth 64
+no shutdown
+
+- Use ping to verify local subnet connectivity.
+- R1
+ping FEC0::12:2
+ping FEC0::13:3
+
+- R2
+ping FEC0::12:1
+
+- R3
+ping FEC0::13:1
+
+- Step 4: Change the link-local address on an interface.
+- R1, R2
+show ipv6 interface serial 0/0/0
+
+- To change the link-local address, use the ipv6 address address link-local command.
+- R1
+interface serial0/0/0
+ipv6 address FE80::1 link-local
+
+- R2
+interface serial0/0/0
+ipv6 address FE80::2 link-local
+
+- Verify that you can ping the link-local address on the other side. When pinging link-local addresses, you must specify an outgoing interface because the addresses are not routed and not in the routing table.
+- R1
+ping FE80::2
+#press enter
+Output Interface: Serial0/0/0
+
+- R2
+ping FE80::1
+#press enter
+Output Interface: Serial0/0/0
+
+- Verify the link-local addresses with the show ipv6 interface command.
+- R1, R2
+show ipv6 interface serial 0/0/0
+
+- Step 5: Configure EUI-64 addresses.
+- R2
+interface fastEthernet 0/0
+ipv6 address FEC0:23::/64 eui-64
+no shutdown
+
+- R3
+interface fastEthernet 0/0
+ipv6 address FEC0:23::/64 eui-64
+no shutdown
+
+- Get the IPv6 addresses of the interfaces with the show ipv6 interface or show ipv6 interface brief command, and then ping the other side of the link.
+- R2
+show ipv6 interface fastEthernet 0/0
+show ipv6 interface brief
+ping FEC0:23::218:B9FF:FECD:BEF0
+
+- R3
+show ipv6 interface brief
+ping FEC0:23::218:B9FF:FE92:28D8
+
+- Step 6: Enable IPv6 routing and CEF.
+- R1, R2, R3
+ipv6 unicast-routing
+ip cef
+ipv6 cef
+
+- Step 7: Configure OSPFv3.
+- Unlike IPv4 OSPF, where networks are added to the OSPF process using network statements under the routing protocol configuration prompt, IPv6 OSPF uses the interface-level command ipv6 ospf process area area-id to add an interface to an area.
+- R1
+interface loopback0
+ipv6 ospf 1 area 0
+interface serial0/0/0
+ipv6 ospf 1 area 0
+interface serial0/0/1
+ipv6 ospf 1 area 0
+
+- R2
+interface loopback0
+ipv6 ospf 1 area 0
+interface serial0/0/0
+ipv6 ospf 1 area 0
+interface fastEthernet 0/0
+ipv6 ospf 1 area 0
+
+- R3
+interface loopback0
+ipv6 ospf 1 area 0
+interface serial0/0/0
+ipv6 ospf 1 area 0
+interface fastEthernet 0/0
+ipv6 ospf 1 area 0
+
+- Verify that you have OSPFv3 neighbors with the show ipv6 ospf neighbor command.
+- R1, R2, R3
+show ipv6 ospf neighbor
+
+- View the routing table on all three routers with the show ipv6 route command.
+- R1, R2, R3
+show ipv6 route
+
+- You can also look at per-interface OSPF behavior with the show ipv6 ospf interface command.
+- R1, R2, R3
+show ipv6 ospf interface
+
+
+
+
+
+-- 5B Configuring 6to4 Tunnels (Journal Topology) --
+- Step 1: Configure all the routers with OSPF Configuration
+- R1
+ipv6 unicast-routing
+interface fastEthernet0/0
+ipv6 enable
+ipv6 address 1000:1:1:1:1:1:1:1158/112
+ipv6 rip 6bone enable
+no shutdown
+exit
+
+- R2
+ipv6 unicast-routing
+interface tunnel0
+ipv6 address 2000::1/64
+ipv6 rip 6bone enable
+tunnel source fastEthernet0/1
+tunnel destination 192.168.20.1
+tunnel mode ipv6ip
+no shut
+interface fastEthernet0/1
+ip address 192.168.10.1 255.255.255.0
+no shut
+interface fastEthernet0/0
+ipv6 enable
+ipv6 address 1000::2/64
+ipv6 rip 6bone enable
+no shut
+router ospf 1
+network 192.168.10.0 0.0.0.255 area 0
+exit
+
+- R3
+interface fastEthernet0/1
+ip address 192.168.10.2 255.255.255.0
+no shut
+exit
+interface fastEthernet0/0
+ip address 192.168.20.2 255.255.255.0
+no shut
+exit
+router ospf 1
+network 192.168.10.0 0.0.0.255 area 0
+network 192.168.20.0 0.0.0.255 area 0
+exit
+
+- R4
+ipv6 unicast-routing
+interface tunnel0
+ipv6 address 2000::2/64
+ipv6 rip 6bone enable
+tunnel source fastEthernet0/0
+tunnel destination 192.168.10.1
+tunnel mode ipv6ip
+no shut
+exit
+interface fastEthernet0/0
+ip address 192.168.20.1 255.255.255.0
+no shut
+exit
+interface fastEthernet0/1
+ipv6 enable
+ipv6 address 3000::2/64
+ipv6 rip 6bone enable
+no shut
+exit
+router ospf 1
+network 192.168.20.0 0.0.0.255 area 0
+exit
+
+- R5
+ipv6 unicast-routing
+interface fastEthernet0/1
+ipv6 enable
+ipv6 address 3000:1:1:1:1:1:1:1158/112
+ipv6 rip 6bone enable
+no shutdown
+exit
+
+- Now Test the Connectivity by Pinging Router 1 To Router 5
+- R1
+ping ipv6 3000:1:1:1:1:1:1:1158
+
+- R5
+ping ipv6 1000:1:1:1:1:1:1:1158
+
+
+
+
+
+
+
+-- 6A Static VLANS, VLAN Trunking, and VTP Domains and Modes --
+- Step 1: Prepare the switches for the lab.
+#nothing to do here
+
+- Step 2: Configure basic switch parameters.
+- DLS1
+interface vlan 1
+ip address 10.1.1.101 255.255.255.0
+no shutdown
+exit
+enable secret cisco
+line vty 0 5
+password cisco
+login
+exit
+
+- DLS2
+interface vlan 1
+ip address 10.1.1.102 255.255.255.0
+no shutdown
+exit
+enable secret cisco
+line vty 0 5
+password cisco
+login
+exit
+
+- ALS1
+interface vlan 1
+ip address 10.1.1.103 255.255.255.0
+no shutdown
+exit
+enable secret cisco
+line vty 0 5
+password cisco
+login
+exit
+
+- ALS2
+interface vlan 1
+ip address 10.1.1.104 255.255.255.0
+no shutdown
+exit
+enable secret cisco
+line vty 0 5
+password cisco
+login
+exit
+
+- Step 3: Display the switch default VLAN information.
+- ALS1, DLS1
+show vlan
+
+- Step 4: Examine VTP information.
+- The following describes the three VTP modes.
+- 1. VTP server: You can create, modify, and delete VLANs and specify other configuration parameters, such as VTP version and VTP pruning, for the entire VTP domain. VTP servers advertise their VLAN configuration to other switches in the same VTP domain and synchronize their VLAN configuration with other switches based on advertisements received over trunk links. VTP server is the default mode.
+- 2. VTP client: VTP clients behave the same way as VTP servers, but you cannot create, change, or delete VLANs on a VTP client.
+- 3. VTP transparent: VTP transparent switches do not participate in VTP. A VTP transparent switch does not advertise its VLAN configuration nor synchronize its VLAN configuration based on received advertisements. Transparent switches do forward VTP advertisements that they receive out their trunk ports in VTP Version 2.
+
+- DLS1
+show vtp status
+
+- Step 5: Configure VTP on the switches.
+- DLS1
+vtp domain SWLAB
+vtp version 2
+vtp mode server
+
+- ALS1
+vtp mode client
+
+- ALS1
+show vtp status
+
+- Step 6: Configure trunking.
+- ALS1
+show interfaces fastEthernet 0/7 switchport
+
+- DLS1
+interface range fastEthernet 0/7-10
+switchport trunk encapsulation dot1q
+switchport mode trunk
+interface range fastEthernet 0/11-12
+switchport trunk encapsulation isl
+switchport mode trunk
+
+- ALS1
+interface range fastEthernet 0/7–12
+switchport mode trunk
+
+- DLS2
+interface range fastEthernet 0/7-8
+switchport trunk encapsulation dot1q
+switchport mode trunk
+
+- Step 7: Verify trunk configuration.
+- ALS2
+show interfaces fastEthernet 0/7 switchport
+
+- Notice that administrative mode on Fa0/7 is still the default dynamic auto. Fa0/7 on ALS2 is operating as a trunk, because port Fa0/7 of DLS2 was configured using the switchport mode trunk command. Once this command was issued, trunking was negotiated between the two switch ports.
+
+- DLS1
+show interfaces trunk
+
+- Note: By default, all VLANs are allowed on all trunks. You can explicitly control which VLANs are allowed on a trunk by using the switchport trunk allowed vlan vlan-id command on the interface at each end of the trunk. In addition, you can specify a native VLAN other than the default VLAN 1, using the switchport trunk native vlan vlan-id command. These two measures can help reduce the possibility of VLAN attacks.
+
+- DLS2:
+show interfaces trunk
+
+- Notice the highlighted portion of the above output from DLS2 where it indicates that these ports became trunks by negotiation. For example, port Fa0/9 mode is Auto and encapsulation is n-802.1q. The “n” indicates the 802.1q encapsulation was negotiated. The connected ports of the respective switches were configured using the switchport mode trunk command.
+
+Step 8: Configure access ports.
+- ALS1
+interface fastEthernet 0/6
+switchport mode access
+
+- DLS1
+show interfaces fastEthernet 0/6 switchport
+
+- Step 9: Verify VTP configuration.
+- ALS1
+show vtp status
+
+- ALS2
+show vtp status
+
+- At this point, all switches in the lab are in VTP domain SWLAB and have five existing VLANs. All are running VTP version 2. DLS1 and DLS2 are configured as VTP servers, and ALS1 and ALS2 are configured as clients.
+
+- Step 10: Configure VLANs by assigning port membership.
+- DLS1
+interface FastEthernet 0/6
+switchport access vlan 100
+
+- DLS2
+interface FastEthernet 0/6
+switchport access vlan 110
+
+- DLS1
+show vlan
+
+- Because VLAN 100 and 110 were not named, the switch automatically assigns default names, which are VLAN0100 and VLAN0110.
+- Note that on DLS1, port Fa0/6 is active in VLAN 100. A show vlan command issued on DLS2 should show port Fa0/6 active in VLAN 110.
+
+- Step 11: Configure VLANs in configuration mode.
+- DLS1
+vlan 120
+
+- ALS1
+interface fastEthernet 0/6
+switchport access vlan 120
+
+- ALS2
+interface fastEthernet 0/6
+switchport access vlan 120
+
+- ALS1
+show vlan
+
+- Step 12: Change the VLAN names.
+vlan 100
+name Server-Farm-1
+exit
+vlan 110
+name Server-Farm-2
+exit
+vlan 120
+name Net-Eng
+exit
+
+- Use the show vlan command on DLS1 to verify that the new names have been added.
+- DLS1
+show vlan
+
+- Step 13: Change the VLAN status to deactivate ports.
+- ALS1
+vlan 120
+shutdown
+
+- ALS1
+show vlan brief
+
+- ALS1
+vlan 120
+no shutdown
+
+- You can also put a VLAN into “suspend” status. The "suspend" state is configured in the VLAN configuration mode using the command state suspend. Suspending a VLAN causes all ports in that VLAN throughout the VTP domain to stop transferring data.
+- ALS1
+vlan 120
+state suspend
+
+- ALS1
+show vlan brief
+
+- Reactivate VLAN 120 using the state active command in VLAN configuration mode
+- ALS1
+vlan 120
+state active
+
+
+
+
+
+-- 6B Configuring EtherChannel --
+- Step 1: Prepare the switches for the lab.
+#nothing to do here
+
+- Step 2: Configure basic switch parameters.
+- DLS1, DLS2
+interface range fastEthernet 0/7-12
+switchport trunk encapsulation dot1q
+switchport mode trunk
+
+- ALS1, ALS2
+interface range fastEthernet 0/7-12
+switchport mode trunk
+
+- Step 3: Configure an EtherChannel with Cisco PAgP.
+- The first EtherChannel created for this lab aggregates ports Fa0/11 and Fa0/12 between ALS1 and ALS2. Make sure that you have a trunk link active for those two links with the show interfaces trunk command.
+- ALS1
+show interfaces trunk
+
+- On both switches, add ports Fa0/11 and Fa0/12 to port channel 1 with the channel-group 1 mode desirable command. The mode desirable option indicates that you want the switch to actively negotiate to form a PAgP link.
+- ALS1, ALS2
+interface range fastEthernet 0/11 - 12
+channel-group 1 mode desirable
+exit
+
+- Configure the logical interface to become a trunk by first entering the interface port-channel number command and then the switchport mode trunk command. Add this configuration to both switches.
+- ALS1, ALS2
+interface port-channel 1
+switchport mode trunk
+
+- Verify that EtherChannel is working by issuing the show etherchannel summary command on both switches. This command displays the type of EtherChannel, the ports utilized, and port states.
+- ALS1, ALS2
+show etherchannel summary
+
+- ALS1
+show interfaces trunk
+show spanning-tree
+
+- Step 4: Configure an 802.3ad LACP EtherChannel.
+- ALS1, DLS1
+interface range fastEthernet 0/7 - 8
+channel-group 2 mode active
+interface port-channel 2
+switchport mode trunk
+exit
+
+- Verify the configuration with the show etherchannel summary command.
+- ALS1
+show etherchannel summary
+
+- Step 5: Configure a Layer 3 EtherChannel.
+- Use the no switchport command on Fa0/11 and Fa0/12 to make them Layer 3 ports, and then add them to the channel group with the channel-group number mode desirable command. On the logical interface, issue the no switchport command to make it a Layer 3 port. Add the IP address 10.0.0.1 for DLS1 and 10.0.0.2 for DLS2. Configure both with a /24 subnet mask.
+- DLS1
+interface range fastEthernet 0/11 - 12
+no switchport
+channel-group 3 mode desirable
+interface port-channel 3
+no switchport
+ip address 10.0.0.1 255.255.255.0
+
+- DLS2
+interface range fastEthernet 0/11 - 12
+no switchport
+channel-group 3 mode desirable
+interface port-channel 3
+no switchport
+ip address 10.0.0.2 255.255.255.0
+
+- Verify that you have Layer 3 connectivity by attempting to ping the other side of the link.
+- DLS1
+ping 10.0.0.2
+
+- If you look at the output of the show etherchannel summary command, you see that it lists the port channel as a routed port, not a switched port. The RU in parentheses next to the name means routed and up, as opposed to switched and up (SU).
+- DLS1
+show etherchannel summary
+
+- Step 6: Configure load balancing.
+- You can view the current load-balancing configuration with the show etherchannel load-balance command.
+- DLS1
+show etherchannel load-balance
+
+- For this scenario, configure ALS1 to load-balance by both source and destination MAC addresses using the global configuration command port-channel load-balance method, where the method is src-dst-mac.
+- ALS1
+port-channel load-balance src-dst-mac
+
+- Verify the configuration with the show etherchannel load-balance command.
+- ALS1
+show etherchannel load-balance
+
+
+
+
+
+-- 7A Spanning Tree Protocol (STP) Default Behavior --
+
+
+
